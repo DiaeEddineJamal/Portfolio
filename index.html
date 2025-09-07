@@ -35,10 +35,56 @@
       html {
         scroll-behavior: smooth;
       }
+      
+      /* Performance optimizations */
+      img {
+        content-visibility: auto;
+      }
+      
+      /* Reduce motion for users who prefer it */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Performance monitoring -->
+    <script>
+      // Monitor Core Web Vitals
+      if ('web-vitals' in window) {
+        import('https://unpkg.com/web-vitals@3/dist/web-vitals.js').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
+          getCLS(console.log);
+          getFID(console.log);
+          getFCP(console.log);
+          getLCP(console.log);
+          getTTFB(console.log);
+        }).catch(() => {
+          // Silently fail if web-vitals can't be loaded
+        });
+      }
+      
+      // Preload critical resources
+      const preloadLink = document.createElement('link');
+      preloadLink.rel = 'preload';
+      preloadLink.as = 'image';
+      preloadLink.href = '/profile-image.jpg';
+      document.head.appendChild(preloadLink);
+      
+      const preloadLink2 = document.createElement('link');
+      preloadLink2.rel = 'preload';
+      preloadLink2.as = 'image';
+      preloadLink2.href = '/profile-image2.jpg';
+      document.head.appendChild(preloadLink2);
+    </script>
   </body>
 </html>

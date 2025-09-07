@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import './profilecard.css';
 
 interface ProfileCardProps {
@@ -44,7 +44,7 @@ const adjust = (value: number, fromMin: number, fromMax: number, toMin: number, 
 
 const easeInOutCubic = (x: number): number => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
 
-const ProfileCardComponent: React.FC<ProfileCardProps> = ({
+const ProfileCardComponent: React.FC<ProfileCardProps> = memo(({
   avatarUrl = '<Placeholder for avatar URL>',
   iconUrl = '<Placeholder for icon URL>',
   grainUrl = '<Placeholder for grain URL>',
@@ -336,8 +336,9 @@ const ProfileCardComponent: React.FC<ProfileCardProps> = ({
       </section>
     </div>
   );
-};
+});
 
-const ProfileCard = React.memo(ProfileCardComponent);
+const ProfileCard = ProfileCardComponent;
+ProfileCard.displayName = 'ProfileCard';
 
 export default ProfileCard;

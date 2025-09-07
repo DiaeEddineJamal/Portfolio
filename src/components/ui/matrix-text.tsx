@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
-interface LetterState {
+interface Letter {
     char: string;
     isMatrix: boolean;
     isSpace: boolean;
@@ -20,7 +20,7 @@ interface MatrixTextProps {
     matrixColor?: string;
 }
 
-export const MatrixText = ({
+export const MatrixText = React.memo(({
     text = "HelloWorld!",
     className,
     initialDelay = 200,
@@ -29,7 +29,7 @@ export const MatrixText = ({
     scrollTriggered = false,
     matrixColor = "rgb(198, 128, 255)",
 }: MatrixTextProps) => {
-    const [letters, setLetters] = useState<LetterState[]>(() =>
+    const [letters, setLetters] = useState<Letter[]>(() =>
         text.split("").map((char) => ({
             char,
             isMatrix: false,
@@ -191,4 +191,4 @@ export const MatrixText = ({
             </div>
         </div>
     );
-};
+});

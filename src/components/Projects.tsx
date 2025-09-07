@@ -1,11 +1,50 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, memo, lazy, Suspense } from 'react';
 import { ExternalLink, Github, Zap, Shield, Smartphone, Palette, Database, Bot } from 'lucide-react';
 import { fetchGithubRepos, GithubRepo, GITHUB_USERNAME } from '../utils/github';
-import ElectricBorder from './ElectricBorder';
+import { optimizeImageUrl } from '../utils/performance';
 import { MatrixText } from './ui/matrix-text';
 
-const Projects = () => {
+// Lazy load ElectricBorder for better performance
+const ElectricBorder = lazy(() => import('./ElectricBorder'));
+
+// Optimized image component with lazy loading
+const LazyImage = memo(({ src, alt, className }: { src: string; alt: string; className: string }) => {
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+  
+  // Optimize image URL for better performance
+  const optimizedSrc = useMemo(() => optimizeImageUrl(src, 800, 75), [src]);
+
+  return (
+    <div className={`relative ${className}`}>
+      {!loaded && !error && (
+        <div className="absolute inset-0 bg-gray-800 animate-pulse rounded-lg" />
+      )}
+      <img
+        src={optimizedSrc}
+        alt={alt}
+        className={`${className} transition-opacity duration-300 ${
+          loaded ? 'opacity-100' : 'opacity-0'
+        }`}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={() => setError(true)}
+      />
+      {error && (
+        <div className="absolute inset-0 bg-gray-800 flex items-center justify-center rounded-lg">
+          <span className="text-gray-400 text-sm">Failed to load</span>
+        </div>
+      )}
+    </div>
+  );
+});
+
+LazyImage.displayName = 'LazyImage';
+
+const Projects = memo(() => {
   const [repos, setRepos] = useState<GithubRepo[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchGithubRepos(GITHUB_USERNAME).then(setRepos);
@@ -147,16 +186,17 @@ const Projects = () => {
 
           <div className="grid lg:grid-cols-2 gap-8">
             {projects.map((project, index) => (
-              <ElectricBorder key={index} color="rgb(198, 128, 255)" speed={1} chaos={0.5} thickness={2} style={{ borderRadius: 16 }}>
-              <div 
-                className="group bg-black rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-[#2a2766] hover:border-electric"
-              >
-                <div className="relative overflow-hidden">
-                  <img 
-                    src={project.image} 
-                    alt={project.title}
-                    className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
+              <Suspense key={index} fallback={<div className="bg-gray-800 rounded-2xl h-96 animate-pulse" />}>
+                <ElectricBorder color="rgb(198, 128, 255)" speed={1} chaos={0.5} thickness={2} style={{ borderRadius: 16 }}>
+                <div 
+                  className="group bg-black rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-[#2a2766] hover:border-electric"
+                >
+                  <div className="relative overflow-hidden">
+                    <LazyImage 
+                      src={project.image} 
+                      alt={project.title}
+                      className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
                   <div className="absolute top-4 right-4">
                     <div className={`p-3 rounded-full ${getColorClasses(project.color)} border transition-all duration-300`}>
                       {project.icon}
@@ -208,6 +248,7 @@ const Projects = () => {
                 </div>
               </div>
               </ElectricBorder>
+              </Suspense>
             ))}
           </div>
 
@@ -228,6 +269,8 @@ const Projects = () => {
       </div>
     </section>
   );
-};
+});
+
+Projects.displayName = 'Projects';
 
 export default Projects;

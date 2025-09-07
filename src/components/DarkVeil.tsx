@@ -1,5 +1,29 @@
-import { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo, useCallback } from 'react';
 import { Renderer, Program, Mesh, Triangle, Vec2 } from 'ogl';
+
+// Performance optimization: reduce shader complexity on low-end devices
+const getPerformanceLevel = () => {
+  if (typeof window === 'undefined') return 'high';
+  
+  const canvas = document.createElement('canvas');
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl') as WebGLRenderingContext | null;
+  
+  if (!gl) return 'low';
+  
+  try {
+    const renderer = gl.getParameter(gl.RENDERER) as string;
+    const vendor = gl.getParameter(gl.VENDOR) as string;
+    
+    // Detect mobile/low-end devices
+    if (/mobile|android|iphone|ipad/i.test(navigator.userAgent)) return 'medium';
+    if (renderer && renderer.toLowerCase().includes('intel')) return 'medium';
+    
+    return 'high';
+  } catch (error) {
+    // Fallback if WebGL context methods fail
+    return 'medium';
+  }
+};
 
 const vertex = `
 attribute vec2 position;
@@ -73,7 +97,7 @@ void main(){
 }
 `;
 
-type Props = {
+interface DarkVeilProps {
   hueShift?: number;
   noiseIntensity?: number;
   scanlineIntensity?: number;
@@ -81,24 +105,61 @@ type Props = {
   scanlineFrequency?: number;
   warpAmount?: number;
   resolutionScale?: number;
-};
+}
 
-export default function DarkVeil({
+const DarkVeil = React.memo(({
   hueShift = 0,
-  noiseIntensity = 0,
-  scanlineIntensity = 0,
-  speed = 0.5,
-  scanlineFrequency = 0,
-  warpAmount = 0,
+  noiseIntensity = 0.02,
+  scanlineIntensity = 0.03,
+  speed = 1,
+  scanlineFrequency = 1,
+  warpAmount = 0.3,
   resolutionScale = 1
-}: Props) {
+}: DarkVeilProps) => {
   const ref = useRef<HTMLCanvasElement>(null);
+  
+  // Memoize performance level to avoid recalculation
+  const performanceLevel = useMemo(() => getPerformanceLevel(), []);
+  
+  // Adjust settings based on performance level
+  const optimizedSettings = useMemo(() => {
+    const baseSettings = {
+      hueShift,
+      noiseIntensity,
+      scanlineIntensity,
+      speed,
+      scanlineFrequency,
+      warpAmount,
+      resolutionScale
+    };
+    
+    if (performanceLevel === 'low') {
+      return {
+        ...baseSettings,
+        noiseIntensity: baseSettings.noiseIntensity * 0.5,
+        scanlineIntensity: baseSettings.scanlineIntensity * 0.5,
+        speed: baseSettings.speed * 0.7,
+        resolutionScale: Math.min(baseSettings.resolutionScale * 0.6, 0.6)
+      };
+    }
+    
+    if (performanceLevel === 'medium') {
+      return {
+        ...baseSettings,
+        noiseIntensity: baseSettings.noiseIntensity * 0.8,
+        resolutionScale: Math.min(baseSettings.resolutionScale * 0.8, 0.8)
+      };
+    }
+    
+    return baseSettings;
+  }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale, performanceLevel]);
+
   useEffect(() => {
     const canvas = ref.current as HTMLCanvasElement;
     const parent = canvas.parentElement as HTMLElement;
 
     const renderer = new Renderer({
-      dpr: Math.min(window.devicePixelRatio, 2),
+      dpr: performanceLevel === 'low' ? 1 : Math.min(window.devicePixelRatio, 2),
       canvas
     });
 
@@ -111,11 +172,11 @@ export default function DarkVeil({
       uniforms: {
         uTime: { value: 0 },
         uResolution: { value: new Vec2() },
-        uHueShift: { value: hueShift },
-        uNoise: { value: noiseIntensity },
-        uScan: { value: scanlineIntensity },
-        uScanFreq: { value: scanlineFrequency },
-        uWarp: { value: warpAmount }
+        uHueShift: { value: optimizedSettings.hueShift },
+        uNoise: { value: optimizedSettings.noiseIntensity },
+        uScan: { value: optimizedSettings.scanlineIntensity },
+        uScanFreq: { value: optimizedSettings.scanlineFrequency },
+        uWarp: { value: optimizedSettings.warpAmount }
       }
     });
 
@@ -124,7 +185,7 @@ export default function DarkVeil({
     const resize = () => {
       const w = parent.clientWidth,
         h = parent.clientHeight;
-      renderer.setSize(w * resolutionScale, h * resolutionScale);
+      renderer.setSize(w * optimizedSettings.resolutionScale, h * optimizedSettings.resolutionScale);
       program.uniforms.uResolution.value.set(w, h);
     };
 
@@ -135,12 +196,12 @@ export default function DarkVeil({
     let frame = 0;
 
     const loop = () => {
-      program.uniforms.uTime.value = ((performance.now() - start) / 1000) * speed;
-      program.uniforms.uHueShift.value = hueShift;
-      program.uniforms.uNoise.value = noiseIntensity;
-      program.uniforms.uScan.value = scanlineIntensity;
-      program.uniforms.uScanFreq.value = scanlineFrequency;
-      program.uniforms.uWarp.value = warpAmount;
+      program.uniforms.uTime.value = ((performance.now() - start) / 1000) * optimizedSettings.speed;
+      program.uniforms.uHueShift.value = optimizedSettings.hueShift;
+      program.uniforms.uNoise.value = optimizedSettings.noiseIntensity;
+      program.uniforms.uScan.value = optimizedSettings.scanlineIntensity;
+      program.uniforms.uScanFreq.value = optimizedSettings.scanlineFrequency;
+      program.uniforms.uWarp.value = optimizedSettings.warpAmount;
       renderer.render({ scene: mesh });
       frame = requestAnimationFrame(loop);
     };
@@ -151,6 +212,11 @@ export default function DarkVeil({
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', resize);
     };
-  }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale]);
+  }, [optimizedSettings]);
+  
   return <canvas ref={ref} className="w-full h-full block" />;
-}
+});
+
+DarkVeil.displayName = 'DarkVeil';
+
+export default DarkVeil;

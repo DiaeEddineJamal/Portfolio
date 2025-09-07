@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowRight, Download, Github, Linkedin } from 'lucide-react';
 import DarkVeil from './DarkVeil';
-import ProfileCard from './profileCard';
+import ProfileCard from './profilecard';
 import { MatrixText } from './ui/matrix-text';
 
 const Hero = () => {

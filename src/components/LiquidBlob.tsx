@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { prefersReducedMotion, getDevicePerformance, createIntersectionObserver } from '@/utils/performance';
 
 type LiquidBlobProps = {
   className?: string;
@@ -7,10 +8,15 @@ type LiquidBlobProps = {
 
 // Simple value-noise based blobby shape that reacts to mouse movement
 const LiquidBlob: React.FC<LiquidBlobProps> = ({ className, color = '#E7C049' }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
   const timeRef = useRef(0);
+  const isVisibleRef = useRef(true);
+  const [isVisible, setIsVisible] = useState(true);
+  const reducedMotion = useMemo(() => prefersReducedMotion(), []);
+  const perf = useMemo(() => getDevicePerformance(), []);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -29,6 +35,14 @@ const LiquidBlob: React.FC<LiquidBlobProps> = ({ className, color = '#E7C049' })
     };
     resize();
 
+    const observer = createIntersectionObserver((entries) => {
+      for (const e of entries) {
+        isVisibleRef.current = e.isIntersecting;
+        setIsVisible(e.isIntersecting);
+      }
+    }, { threshold: 0.15, rootMargin: '150px' });
+    if (observer && containerRef.current) observer.observe(containerRef.current);
+
     const onMove = (e: MouseEvent) => {
       mouseRef.current.x = e.clientX / width - 0.5;
       mouseRef.current.y = e.clientY / height - 0.5;
@@ -44,7 +58,11 @@ const LiquidBlob: React.FC<LiquidBlobProps> = ({ className, color = '#E7C049' })
     };
 
     const draw = () => {
-      timeRef.current += 0.008;
+      if (!isVisibleRef.current) {
+        rafRef.current = requestAnimationFrame(draw);
+        return;
+      }
+      timeRef.current += perf === 'low' ? 0.004 : 0.008;
       const t = timeRef.current;
       ctx.clearRect(0, 0, width, height);
 
@@ -52,9 +70,9 @@ const LiquidBlob: React.FC<LiquidBlobProps> = ({ className, color = '#E7C049' })
       ctx.translate(width / 2, height / 2);
 
       const baseRadius = Math.min(width, height) * 0.42;
-      const points = 120;
+      const points = perf === 'low' ? 80 : 120;
       const { x: mx, y: my } = mouseRef.current;
-      const influence = 60 * Math.hypot(mx, my);
+      const influence = (perf === 'low' ? 40 : 60) * Math.hypot(mx, my);
 
       ctx.beginPath();
       for (let i = 0; i <= points; i++) {
@@ -86,15 +104,27 @@ const LiquidBlob: React.FC<LiquidBlobProps> = ({ className, color = '#E7C049' })
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('resize', onResize);
+      observer && observer.disconnect();
     };
-  }, [color]);
+  }, [color, perf]);
+
+  if (reducedMotion || perf === 'low') {
+    return (
+      <div ref={containerRef} className={className} style={{ width: '100%', height: '100%' }}>
+        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+          Blob animation disabled for performance
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <canvas
-      ref={canvasRef}
-      className={className}
-      style={{ width: '100%', height: '100%' }}
-    />
+    <div ref={containerRef} className={className} style={{ width: '100%', height: '100%' }}>
+      <canvas
+        ref={canvasRef}
+        style={{ width: '100%', height: '100%' }}
+      />
+    </div>
   );
 };
 

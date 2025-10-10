@@ -1,4 +1,5 @@
-import React, { CSSProperties, PropsWithChildren, useEffect, useId, useLayoutEffect, useRef } from 'react';
+import React, { CSSProperties, PropsWithChildren, useEffect, useId, useLayoutEffect, useRef, useMemo } from 'react';
+import { prefersReducedMotion, getDevicePerformance, createIntersectionObserver } from '../utils/performance';
 
 import './ElectricBorder.css';
 
@@ -25,11 +26,30 @@ const ElectricBorder: React.FC<ElectricBorderProps> = ({
   const svgRef = useRef<SVGSVGElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const strokeRef = useRef<HTMLDivElement | null>(null);
+  const isVisibleRef = useRef(true);
+
+  const perf = useMemo(() => getDevicePerformance(), []);
+  const reducedMotion = useMemo(() => prefersReducedMotion(), []);
+
+  const effectiveChaos = useMemo(() => {
+    if (reducedMotion) return 0;
+    if (perf === 'low') return Math.min(chaos, 0.5);
+    if (perf === 'medium') return Math.min(chaos, 0.8);
+    return chaos;
+  }, [chaos, perf, reducedMotion]);
+
+  const effectiveSpeed = useMemo(() => {
+    if (reducedMotion) return 0.001;
+    if (perf === 'low') return Math.max(0.5, Math.min(speed, 0.75));
+    if (perf === 'medium') return Math.max(0.75, Math.min(speed, 1));
+    return speed;
+  }, [speed, perf, reducedMotion]);
 
   const updateAnim = () => {
     const svg = svgRef.current;
     const host = rootRef.current;
     if (!svg || !host) return;
+    if (!isVisibleRef.current) return;
 
     if (strokeRef.current) {
       strokeRef.current.style.filter = `url(#${filterId})`;
@@ -51,11 +71,11 @@ const ElectricBorder: React.FC<ElectricBorderProps> = ({
     }
 
     const baseDur = 6;
-    const dur = Math.max(0.001, baseDur / (speed || 1));
+    const dur = Math.max(0.001, baseDur / (effectiveSpeed || 1));
     [...dyAnims, ...dxAnims].forEach(a => a.setAttribute('dur', `${dur}s`));
 
     const disp = svg.querySelector('feDisplacementMap');
-    if (disp) disp.setAttribute('scale', String(30 * (chaos || 1)));
+    if (disp) disp.setAttribute('scale', String(30 * (effectiveChaos || 1)));
 
     const filterEl = svg.querySelector<SVGFilterElement>(`#${CSS.escape(filterId)}`);
     if (filterEl) {
@@ -78,14 +98,25 @@ const ElectricBorder: React.FC<ElectricBorderProps> = ({
 
   useEffect(() => {
     updateAnim();
-  }, [speed, chaos]);
+  }, [effectiveSpeed, effectiveChaos]);
 
   useLayoutEffect(() => {
     if (!rootRef.current) return;
     const ro = new ResizeObserver(() => updateAnim());
     ro.observe(rootRef.current);
+    const io = createIntersectionObserver(entries => {
+      const entry = entries[0];
+      isVisibleRef.current = !!entry?.isIntersecting;
+      if (isVisibleRef.current) {
+        updateAnim();
+      }
+    });
+    io?.observe(rootRef.current);
     updateAnim();
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      io?.disconnect();
+    };
   }, []);
 
   const vars: CSSProperties = {

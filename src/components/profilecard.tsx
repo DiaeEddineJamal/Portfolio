@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import { prefersReducedMotion, getDevicePerformance, createIntersectionObserver } from '../utils/performance';
 import './profilecard.css';
 
 interface ProfileCardProps {
@@ -44,7 +45,7 @@ const adjust = (value: number, fromMin: number, fromMax: number, toMin: number, 
 
 const easeInOutCubic = (x: number): number => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
 
-const ProfileCardComponent: React.FC<ProfileCardProps> = memo(({
+const ProfileCardComponent: React.FC<ProfileCardProps> = memo(({ 
   avatarUrl = '<Placeholder for avatar URL>',
   iconUrl = '<Placeholder for icon URL>',
   grainUrl = '<Placeholder for grain URL>',
@@ -66,9 +67,27 @@ const ProfileCardComponent: React.FC<ProfileCardProps> = memo(({
 }) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const lastMoveRef = useRef<{ x: number; y: number } | null>(null);
+  const moveScheduledRef = useRef(false);
+  const isVisibleRef = useRef(true);
+
+  const perf = useMemo(() => getDevicePerformance(), []);
+  const reducedMotion = useMemo(() => prefersReducedMotion(), []);
+  const tiltIntensity = useMemo(() => {
+    if (reducedMotion) return 0;
+    switch (perf) {
+      case 'low':
+        return 0.6;
+      case 'medium':
+        return 0.85;
+      default:
+        return 1;
+    }
+  }, [perf, reducedMotion]);
+  const tiltEnabled = useMemo(() => enableTilt && !reducedMotion && perf !== 'low', [enableTilt, reducedMotion, perf]);
 
   const animationHandlers = useMemo(() => {
-    if (!enableTilt) return null;
+    if (!tiltEnabled) return null;
 
     let rafId: number | null = null;
 
@@ -90,8 +109,8 @@ const ProfileCardComponent: React.FC<ProfileCardProps> = memo(({
         '--pointer-from-center': `${clamp(Math.hypot(percentY - 50, percentX - 50) / 50, 0, 1)}`,
         '--pointer-from-top': `${percentY / 100}`,
         '--pointer-from-left': `${percentX / 100}`,
-        '--rotate-x': `${round(-(centerX / 5))}deg`,
-        '--rotate-y': `${round(centerY / 4)}deg`
+        '--rotate-x': `${round(-(centerX / 5) * tiltIntensity)}deg`,
+        '--rotate-y': `${round((centerY / 4) * tiltIntensity)}deg`
       };
 
       Object.entries(properties).forEach(([property, value]) => {
@@ -138,17 +157,27 @@ const ProfileCardComponent: React.FC<ProfileCardProps> = memo(({
         }
       }
     };
-  }, [enableTilt]);
+  }, [tiltEnabled, tiltIntensity]);
 
   const handlePointerMove = useCallback(
     (event: PointerEvent) => {
       const card = cardRef.current;
       const wrap = wrapRef.current;
 
-      if (!card || !wrap || !animationHandlers) return;
+      if (!card || !wrap || !animationHandlers || !isVisibleRef.current) return;
 
       const rect = card.getBoundingClientRect();
-      animationHandlers.updateCardTransform(event.clientX - rect.left, event.clientY - rect.top, card, wrap);
+      lastMoveRef.current = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+
+      if (!moveScheduledRef.current) {
+        moveScheduledRef.current = true;
+        requestAnimationFrame(() => {
+          moveScheduledRef.current = false;
+          if (!lastMoveRef.current) return;
+          const { x, y } = lastMoveRef.current;
+          animationHandlers.updateCardTransform(x, y, card, wrap);
+        });
+      }
     },
     [animationHandlers]
   );
@@ -205,7 +234,7 @@ const ProfileCardComponent: React.FC<ProfileCardProps> = memo(({
   );
 
   useEffect(() => {
-    if (!enableTilt || !animationHandlers) return;
+    if (!tiltEnabled || !animationHandlers) return;
 
     const card = cardRef.current;
     const wrap = wrapRef.current;
@@ -233,6 +262,18 @@ const ProfileCardComponent: React.FC<ProfileCardProps> = memo(({
       }
     };
 
+    // intersection observer to pause animations offscreen
+    const io = createIntersectionObserver(entries => {
+      const entry = entries[0];
+      isVisibleRef.current = !!entry?.isIntersecting;
+      if (!isVisibleRef.current) {
+        wrap.classList.remove('active');
+        card.classList.remove('active');
+        animationHandlers.cancelAnimation();
+      }
+    });
+    io?.observe(card);
+
     card.addEventListener('pointerenter', pointerEnterHandler);
     card.addEventListener('pointermove', pointerMoveHandler);
     card.addEventListener('pointerleave', pointerLeaveHandler);
@@ -250,10 +291,11 @@ const ProfileCardComponent: React.FC<ProfileCardProps> = memo(({
       card.removeEventListener('pointerleave', pointerLeaveHandler);
       card.removeEventListener('click', handleClick);
       window.removeEventListener('deviceorientation', deviceOrientationHandler);
+      io?.disconnect();
       animationHandlers.cancelAnimation();
     };
   }, [
-    enableTilt,
+    tiltEnabled,
     enableMobileTilt,
     animationHandlers,
     handlePointerMove,

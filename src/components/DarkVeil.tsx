@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useRef, useEffect, useMemo, useCallback, useState } from 'react';
 import { Renderer, Program, Mesh, Triangle, Vec2 } from 'ogl';
+import { prefersReducedMotion, getDevicePerformance, createIntersectionObserver } from '@/utils/performance';
 
 // Performance optimization: reduce shader complexity on low-end devices
 const getPerformanceLevel = () => {
@@ -107,7 +108,7 @@ interface DarkVeilProps {
   resolutionScale?: number;
 }
 
-const DarkVeil = React.memo(({
+const DarkVeil = React.memo(({ 
   hueShift = 0,
   noiseIntensity = 0.02,
   scanlineIntensity = 0.03,
@@ -117,9 +118,18 @@ const DarkVeil = React.memo(({
   resolutionScale = 1
 }: DarkVeilProps) => {
   const ref = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(true);
   
   // Memoize performance level to avoid recalculation
-  const performanceLevel = useMemo(() => getPerformanceLevel(), []);
+  const perfDevice = useMemo(() => getDevicePerformance(), []);
+  const reducedMotion = useMemo(() => prefersReducedMotion(), []);
+  const performanceLevel = useMemo(() => {
+    // If user prefers reduced motion or device is low, treat as low/disable
+    if (reducedMotion) return 'low';
+    if (perfDevice === 'low') return 'low';
+    return getPerformanceLevel();
+  }, [perfDevice, reducedMotion]);
   
   // Adjust settings based on performance level
   const optimizedSettings = useMemo(() => {
@@ -156,7 +166,13 @@ const DarkVeil = React.memo(({
 
   useEffect(() => {
     const canvas = ref.current as HTMLCanvasElement;
-    const parent = canvas.parentElement as HTMLElement;
+    const parent = containerRef.current as HTMLElement;
+    if (!canvas || !parent) return;
+
+    const observer = createIntersectionObserver((entries) => {
+      for (const e of entries) setIsVisible(e.isIntersecting);
+    }, { threshold: 0.2, rootMargin: '150px' });
+    if (observer && parent) observer.observe(parent);
 
     const renderer = new Renderer({
       dpr: performanceLevel === 'low' ? 1 : Math.min(window.devicePixelRatio, 2),
@@ -196,6 +212,10 @@ const DarkVeil = React.memo(({
     let frame = 0;
 
     const loop = () => {
+      if (!isVisible) {
+        frame = requestAnimationFrame(loop);
+        return;
+      }
       program.uniforms.uTime.value = ((performance.now() - start) / 1000) * optimizedSettings.speed;
       program.uniforms.uHueShift.value = optimizedSettings.hueShift;
       program.uniforms.uNoise.value = optimizedSettings.noiseIntensity;
@@ -211,10 +231,23 @@ const DarkVeil = React.memo(({
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', resize);
+      observer && observer.disconnect();
     };
-  }, [optimizedSettings]);
+  }, [optimizedSettings, isVisible]);
   
-  return <canvas ref={ref} className="w-full h-full block" />;
+  if (reducedMotion || perfDevice === 'low') {
+    return (
+      <div ref={containerRef} className="w-full h-full flex items-center justify-center">
+        <div className="rounded-lg border border-muted p-3 text-sm text-muted-foreground">Background animation disabled for performance</div>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="w-full h-full block">
+      <canvas ref={ref} className="w-full h-full block" />
+    </div>
+  );
 });
 
 DarkVeil.displayName = 'DarkVeil';

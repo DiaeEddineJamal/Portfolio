@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import { gsap } from 'gsap';
 import './TargetCursor.css';
+import { prefersReducedMotion, getDevicePerformance } from '../utils/performance';
 
 export interface TargetCursorProps {
   targetSelector?: string;
@@ -15,15 +16,30 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
 }) => {
   const cursorRef = useRef<HTMLDivElement>(null);
   const cornersRef = useRef<NodeListOf<HTMLDivElement>>(null);
-  const spinTl = useRef<gsap.core.Timeline>(null);
+  // Use a mutable ref so we can assign timelines safely
+  const spinTl = useRef<gsap.core.Timeline | null>(null) as React.MutableRefObject<gsap.core.Timeline | null>;
   const dotRef = useRef<HTMLDivElement>(null);
+  const perf = useMemo(() => getDevicePerformance(), []);
+  const reducedMotion = useMemo(() => prefersReducedMotion(), []);
+  const enableEffects = useMemo(() => !reducedMotion && perf !== 'low', [reducedMotion, perf]);
+  const effectiveSpinDuration = useMemo(() => {
+    if (reducedMotion) return 0;
+    switch (perf) {
+      case 'low':
+        return spinDuration * 2;
+      case 'medium':
+        return spinDuration * 1.3;
+      default:
+        return spinDuration;
+    }
+  }, [spinDuration, perf, reducedMotion]);
   const constants = useMemo(
     () => ({
       borderWidth: 3,
       cornerSize: 12,
-      parallaxStrength: 0.00005
+      parallaxStrength: reducedMotion ? 0 : perf === 'low' ? 0.00002 : perf === 'medium' ? 0.00004 : 0.00005
     }),
-    []
+    [perf, reducedMotion]
   );
 
   const moveCursor = useCallback((x: number, y: number) => {
@@ -40,7 +56,7 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
     if (!cursorRef.current) return;
 
     const originalCursor = document.body.style.cursor;
-    if (hideDefaultCursor) {
+    if (hideDefaultCursor && enableEffects) {
       document.body.style.cursor = 'none';
     }
 
@@ -84,15 +100,23 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
       if (spinTl.current) {
         spinTl.current.kill();
       }
-      (spinTl.current as gsap.core.Timeline) = gsap
-        .timeline({ repeat: -1 })
-        .to(cursor, { rotation: '+=360', duration: spinDuration, ease: 'none' });
+      if (effectiveSpinDuration > 0 && enableEffects) {
+        spinTl.current = gsap
+          .timeline({ repeat: -1 })
+          .to(cursor, { rotation: '+=360', duration: effectiveSpinDuration, ease: 'none' });
+      } else {
+        spinTl.current = null;
+      }
     };
 
-    createSpinTimeline();
+    if (enableEffects) {
+      createSpinTimeline();
+    }
 
     const moveHandler = (e: MouseEvent) => moveCursor(e.clientX, e.clientY);
-    window.addEventListener('mousemove', moveHandler);
+    if (enableEffects) {
+      window.addEventListener('mousemove', moveHandler);
+    }
 
     const scrollHandler = () => {
       if (!activeTarget || !cursorRef.current) return;
@@ -112,7 +136,9 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
       }
     };
 
-    window.addEventListener('scroll', scrollHandler, { passive: true });
+    if (enableEffects) {
+      window.addEventListener('scroll', scrollHandler, { passive: true });
+    }
 
     const mouseDownHandler = (): void => {
       if (!dotRef.current) return;
@@ -126,8 +152,10 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
       gsap.to(cursorRef.current, { scale: 1, duration: 0.2 });
     };
 
-    window.addEventListener('mousedown', mouseDownHandler);
-    window.addEventListener('mouseup', mouseUpHandler);
+    if (enableEffects) {
+      window.addEventListener('mousedown', mouseDownHandler);
+      window.addEventListener('mouseup', mouseUpHandler);
+    }
 
     const enterHandler = (e: MouseEvent) => {
       const directTarget = e.target as Element;
@@ -288,7 +316,7 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
             const normalizedRotation = currentRotation % 360;
 
             spinTl.current.kill();
-            (spinTl.current as gsap.core.Timeline) = gsap
+            spinTl.current = gsap
               .timeline({ repeat: -1 })
               .to(cursorRef.current, { rotation: '+=360', duration: spinDuration, ease: 'none' });
 
@@ -314,7 +342,9 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
       target.addEventListener('mouseleave', leaveHandler);
     };
 
-    window.addEventListener('mouseover', enterHandler, { passive: true });
+    if (enableEffects) {
+      window.addEventListener('mouseover', enterHandler, { passive: true });
+    }
 
     return () => {
       window.removeEventListener('mousemove', moveHandler);
@@ -346,21 +376,23 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
       spinTl.current?.kill();
       document.body.style.cursor = originalCursor;
     };
-  }, [targetSelector, spinDuration, moveCursor, constants, hideDefaultCursor]);
+  }, [targetSelector, effectiveSpinDuration, moveCursor, constants, hideDefaultCursor, enableEffects]);
 
   useEffect(() => {
-    if (!cursorRef.current || !spinTl.current) return;
+    if (!cursorRef.current) return;
+    if (!enableEffects) return;
+    if (!spinTl.current) return;
 
     if (spinTl.current.isActive()) {
       spinTl.current.kill();
-      (spinTl.current as gsap.core.Timeline) = gsap
+      spinTl.current = gsap
         .timeline({ repeat: -1 })
-        .to(cursorRef.current, { rotation: '+=360', duration: spinDuration, ease: 'none' });
+        .to(cursorRef.current, { rotation: '+=360', duration: effectiveSpinDuration, ease: 'none' });
     }
-  }, [spinDuration]);
+  }, [effectiveSpinDuration, enableEffects]);
 
   return (
-    <div ref={cursorRef} className="target-cursor-wrapper">
+    <div ref={cursorRef} className="target-cursor-wrapper" style={{ display: enableEffects ? 'block' : 'none' }}>
       <div ref={dotRef} className="target-cursor-dot" />
       <div className="target-cursor-corner corner-tl" />
       <div className="target-cursor-corner corner-tr" />

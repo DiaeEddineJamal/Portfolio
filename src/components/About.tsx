@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Code, Database, Globe, Server } from 'lucide-react';
 import { fetchGithubUser, GITHUB_USERNAME } from '../utils/github';
-import ElectricBorder from './ElectricBorder';
 import { MatrixText } from './ui/matrix-text';
 
 const About = () => {
@@ -85,21 +84,20 @@ const About = () => {
 
             <div className="grid sm:grid-cols-2 gap-6">
               {highlights.map((highlight, index) => (
-                <ElectricBorder key={index} color="rgb(198, 128, 255)" speed={1} chaos={0.5} thickness={2} style={{ borderRadius: 12 }}>
-                  <div 
-                    className="p-6 bg-black rounded-xl hover:bg-gray-900 hover:shadow-lg transition-all duration-300 cursor-target"
-                  >
-                    <div className="text-electric mb-4">
-                      {highlight.icon}
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-100 mb-2">
-                      {highlight.title}
-                    </h4>
-                    <p className="text-gray-300 text-sm">
-                      {highlight.description}
-                    </p>
+                <div 
+                  key={index}
+                  className="p-6 bg-black rounded-xl hover:bg-gray-900 hover:shadow-lg transition-all duration-300 cursor-target border-2 border-electric/40 hover:border-electric/60"
+                >
+                  <div className="text-electric mb-4">
+                    {highlight.icon}
                   </div>
-                </ElectricBorder>
+                  <h4 className="text-lg font-semibold text-gray-100 mb-2">
+                    {highlight.title}
+                  </h4>
+                  <p className="text-gray-300 text-sm">
+                    {highlight.description}
+                  </p>
+                </div>
               ))}
             </div>
           </div>

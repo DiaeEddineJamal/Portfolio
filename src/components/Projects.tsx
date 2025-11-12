@@ -1,11 +1,8 @@
-import React, { useEffect, useMemo, useState, memo, lazy, Suspense } from 'react';
+import React, { useEffect, useMemo, useState, memo } from 'react';
 import { ExternalLink, Github, Zap, Shield, Smartphone, Palette, Database, Bot } from 'lucide-react';
 import { fetchGithubRepos, GithubRepo, GITHUB_USERNAME } from '../utils/github';
 import { optimizeImageUrl } from '../utils/performance';
 import { MatrixText } from './ui/matrix-text';
-
-// Lazy load ElectricBorder for better performance
-const ElectricBorder = lazy(() => import('./ElectricBorder'));
 
 // Optimized image component with lazy loading
 const LazyImage = memo(({ src, alt, className }: { src: string; alt: string; className: string }) => {
@@ -186,69 +183,66 @@ const Projects = memo(() => {
 
           <div className="grid lg:grid-cols-2 gap-8">
             {projects.map((project, index) => (
-              <Suspense key={index} fallback={<div className="bg-gray-800 rounded-2xl h-96 animate-pulse" />}>
-                <ElectricBorder color="rgb(198, 128, 255)" speed={1} chaos={0.5} thickness={2} style={{ borderRadius: 16 }}>
-                <div 
-                  className="group bg-black rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-[#2a2766] hover:border-electric"
-                >
-                  <div className="relative overflow-hidden">
-                    <LazyImage 
-                      src={project.image} 
-                      alt={project.title}
-                      className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  <div className="absolute top-4 right-4">
-                    <div className={`p-3 rounded-full ${getColorClasses(project.color)} border transition-all duration-300`}>
-                      {project.icon}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-8">
-                  <h3 className="text-2xl font-bold text-gray-100 mb-3 group-hover:text-electric transition-colors duration-300">
-                    {project.title}
-                  </h3>
-                  <p className="text-gray-300 mb-6 leading-relaxed">
-                    {project.description}
-                  </p>
-                  
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {project.tech.map((tech, techIndex) => (
-                      <span 
-                        key={techIndex}
-                        className="px-3 py-1 bg-gray-800 text-gray-200 text-sm rounded-full font-medium"
-                      >
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-                  
-                  <div className="flex gap-4">
-                    <a 
-                      href={project.github}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 hover:border-white/30 transition-all duration-500 ease-out font-semibold cursor-target shadow-lg hover:shadow-xl transform hover:scale-105"
-                    >
-                      <Github size={18} />
-                      View Code
-                    </a>
-                    {project.demo && (
-                      <a 
-                        href={project.demo}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-6 py-3 bg-electric/20 backdrop-blur-xl border border-electric/30 text-electric rounded-xl hover:bg-electric/30 hover:border-electric/50 transition-all duration-500 ease-out font-semibold cursor-target shadow-lg hover:shadow-xl transform hover:scale-105"
-                      >
-                        <ExternalLink size={18} />
-                        Live Demo
-                      </a>
-                    )}
+              <div 
+                key={index}
+                className="group bg-black rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-[#2a2766] hover:border-electric/60"
+              >
+                <div className="relative overflow-hidden">
+                  <LazyImage 
+                    src={project.image} 
+                    alt={project.title}
+                    className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                <div className="absolute top-4 right-4">
+                  <div className={`p-3 rounded-full ${getColorClasses(project.color)} border transition-all duration-300`}>
+                    {project.icon}
                   </div>
                 </div>
               </div>
-              </ElectricBorder>
-              </Suspense>
+              
+              <div className="p-8">
+                <h3 className="text-2xl font-bold text-gray-100 mb-3 group-hover:text-electric transition-colors duration-300">
+                  {project.title}
+                </h3>
+                <p className="text-gray-300 mb-6 leading-relaxed">
+                  {project.description}
+                </p>
+                
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {project.tech.map((tech, techIndex) => (
+                    <span 
+                      key={techIndex}
+                      className="px-3 py-1 bg-gray-800 text-gray-200 text-sm rounded-full font-medium"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+                
+                <div className="flex gap-4">
+                  <a 
+                    href={project.github}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 hover:border-white/30 transition-all duration-500 ease-out font-semibold cursor-target shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    <Github size={18} />
+                    View Code
+                  </a>
+                  {project.demo && (
+                    <a 
+                      href={project.demo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-6 py-3 bg-electric/20 backdrop-blur-xl border border-electric/30 text-electric rounded-xl hover:bg-electric/30 hover:border-electric/50 transition-all duration-500 ease-out font-semibold cursor-target shadow-lg hover:shadow-xl transform hover:scale-105"
+                    >
+                      <ExternalLink size={18} />
+                      Live Demo
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
             ))}
           </div>
 

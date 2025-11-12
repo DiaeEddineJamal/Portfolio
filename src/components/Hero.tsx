@@ -127,7 +127,7 @@ const Hero = React.memo(() => {
         </div>
       </div>
 
-      {/* Right vertical email (style stub; real element added elsewhere) */}
+      {}
     </section>
   );
 });

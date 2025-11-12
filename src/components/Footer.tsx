@@ -27,6 +27,15 @@ const Footer = () => {
                   Building innovative digital solutions with passion and precision. 
                   Always exploring new technologies and pushing boundaries in mobile and web development.
                 </p>
+                <div className="flex items-center gap-3 text-gray-300 pt-2">
+                  <Mail size={18} className="text-electric" />
+                  <a 
+                    href="mailto:diae_2002@hotmail.com"
+                    className="hover:text-electric transition-colors duration-200"
+                  >
+                    diae_2002@hotmail.com
+                  </a>
+                </div>
               </div>
               
               {/* Social Links */}
@@ -41,7 +50,7 @@ const Footer = () => {
                   <Github size={20} />
                 </a>
                 <a 
-                  href="https://linkedin.com" 
+                  href="https://www.linkedin.com/in/diae-eddine-jamal-5066242a5/" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="p-3 bg-white/8 backdrop-blur-xl border border-white/15 rounded-xl text-gray-300 hover:text-electric hover:bg-white/15 hover:border-white/30 transition-all duration-500 ease-out cursor-target shadow-lg hover:shadow-xl transform hover:scale-110"
@@ -50,7 +59,7 @@ const Footer = () => {
                   <Linkedin size={20} />
                 </a>
                 <a 
-                  href="mailto:your.email@example.com"
+                  href="mailto:diae_2002@hotmail.com"
                   className="p-3 bg-white/8 backdrop-blur-xl border border-white/15 rounded-xl text-gray-300 hover:text-electric hover:bg-white/15 hover:border-white/30 transition-all duration-500 ease-out cursor-target shadow-lg hover:shadow-xl transform hover:scale-110"
                   aria-label="Email"
                 >
@@ -84,6 +93,17 @@ const Footer = () => {
                   </button>
                 ))}
               </div>
+              <div className="mt-6 p-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl">
+                <div className="flex items-center gap-3 text-gray-300">
+                  <Mail size={16} className="text-electric" />
+                  <a 
+                    href="mailto:diae_2002@hotmail.com"
+                    className="hover:text-electric transition-colors duration-200"
+                  >
+                    diae_2002@hotmail.com
+                  </a>
+                </div>
+              </div>
             </div>
 
             {/* Contact Info */}
@@ -94,7 +114,12 @@ const Footer = () => {
                   <div className="space-y-3 text-gray-300">
                     <div className="flex items-center gap-3">
                       <Mail size={16} className="text-electric" />
-                      <span>diae.eddine@example.com</span>
+                      <a 
+                        href="mailto:diae_2002@hotmail.com"
+                        className="hover:text-electric transition-colors duration-200"
+                      >
+                        diae_2002@hotmail.com
+                      </a>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="w-4 h-4 rounded-full bg-electric flex-shrink-0"></span>
@@ -125,6 +150,15 @@ const Footer = () => {
                   <Heart size={16} className="text-red-500 animate-pulse" />
                   <span>by</span>
                   <span className="font-semibold text-electric">Diae Eddine Jamal</span>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                  <Mail size={14} className="text-electric" />
+                  <a 
+                    href="mailto:diae_2002@hotmail.com"
+                    className="hover:text-electric transition-colors duration-200"
+                  >
+                    diae_2002@hotmail.com
+                  </a>
                 </div>
                 <p className="text-sm text-gray-400">
                   Crafted with modern technologies and attention to detail

@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { aggregateLanguages, fetchGithubRepos, GITHUB_USERNAME } from '../utils/github';
-import ElectricBorder from './ElectricBorder';
 import { MatrixText } from './ui/matrix-text';
 
 const Skills = () => {
@@ -161,33 +160,31 @@ const Skills = () => {
               {skillCategories.map((category, categoryIndex) => (
                 <div key={categoryIndex} className="w-full flex-shrink-0 px-4">
                   <div className="max-w-2xl mx-auto">
-                    <ElectricBorder color="rgb(198, 128, 255)" speed={1} chaos={0.5} thickness={2} style={{ borderRadius: 16 }}>
-                      <div className="bg-black/95 backdrop-blur-xl rounded-2xl p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 cursor-target transform hover:scale-105">
-                        <div className="text-center mb-8">
-                          <div className={`inline-flex items-center px-6 py-3 rounded-full text-lg font-semibold mb-4 ${getColorClasses(category.color).split(' ').slice(2).join(' ')} cursor-target shadow-lg`}>
-                            {category.title}
-                          </div>
-                          <div className="w-16 h-1 bg-electric mx-auto"></div>
+                    <div className="bg-black/95 backdrop-blur-xl rounded-2xl p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 cursor-target transform hover:scale-105 border-2 border-electric/40 hover:border-electric/60">
+                      <div className="text-center mb-8">
+                        <div className={`inline-flex items-center px-6 py-3 rounded-full text-lg font-semibold mb-4 ${getColorClasses(category.color).split(' ').slice(2).join(' ')} cursor-target shadow-lg`}>
+                          {category.title}
                         </div>
-                        
-                        <div className="grid md:grid-cols-2 gap-6">
-                          {category.skills.map((skill, skillIndex) => (
-                            <div key={skillIndex} className="group">
-                              <div className="flex justify-between items-center mb-3">
-                                <span className="text-gray-100 font-medium text-lg">{skill.name}</span>
-                                <span className="text-electric font-semibold">{skill.level}%</span>
-                              </div>
-                              <div className="w-full bg-gray-800/50 backdrop-blur-sm rounded-full h-3 overflow-hidden border border-white/10">
-                                <div 
-                                  className={`h-3 bg-gradient-to-r ${getColorClasses(category.color).split(' ').slice(0, 2).join(' ')} rounded-full transition-all duration-1000 ease-out group-hover:scale-105 shadow-lg`}
-                                  style={{ width: `${skill.level}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <div className="w-16 h-1 bg-electric mx-auto"></div>
                       </div>
-                    </ElectricBorder>
+                      
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {category.skills.map((skill, skillIndex) => (
+                          <div key={skillIndex} className="group">
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="text-gray-100 font-medium text-lg">{skill.name}</span>
+                              <span className="text-electric font-semibold">{skill.level}%</span>
+                            </div>
+                            <div className="w-full bg-gray-800/50 backdrop-blur-sm rounded-full h-3 overflow-hidden border border-white/10">
+                              <div 
+                                className={`h-3 bg-gradient-to-r ${getColorClasses(category.color).split(' ').slice(0, 2).join(' ')} rounded-full transition-all duration-1000 ease-out group-hover:scale-105 shadow-lg`}
+                                style={{ width: `${skill.level}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
